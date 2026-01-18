@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from PIL import Image
 import numpy as np
+import torch
 from ultralytics import YOLO
 
 # --------------------------
@@ -30,9 +31,14 @@ app.add_middleware(
 )
 
 # --------------------------
-# 3) Load YOLO model
+# 3) Load YOLO model - FIX FOR PYTORCH 2.6
 # --------------------------
-model = YOLO("best.pt")  # Just load it directly - works fine
+# Add safe globals BEFORE loading the model (not as context manager)
+from ultralytics.nn.tasks import DetectionModel
+torch.serialization.add_safe_globals([DetectionModel])
+
+# Now load the model
+model = YOLO("best.pt")
 
 # --------------------------
 # 4) Test endpoint
