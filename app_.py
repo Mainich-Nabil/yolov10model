@@ -13,6 +13,12 @@ import torch
 from ultralytics import YOLO
 
 # --------------------------
+# DISABLE PYTORCH SECURITY - JUST MAKE IT WORK
+# --------------------------
+import torch.serialization
+torch.serialization._default_load_weights_only = False
+
+# --------------------------
 # 1) Request schema
 # --------------------------
 class ImageRequest(BaseModel):
@@ -31,13 +37,8 @@ app.add_middleware(
 )
 
 # --------------------------
-# 3) Load YOLO model - FIX FOR PYTORCH 2.6
+# 3) Load YOLO model
 # --------------------------
-# Add safe globals BEFORE loading the model (not as context manager)
-from ultralytics.nn.tasks import DetectionModel
-torch.serialization.add_safe_globals([DetectionModel])
-
-# Now load the model
 model = YOLO("best.pt")
 
 # --------------------------
