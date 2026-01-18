@@ -10,13 +10,7 @@ from pydantic import BaseModel
 from PIL import Image
 import numpy as np
 import torch
-from ultralytics import YOLO
-
-# --------------------------
-# DISABLE PYTORCH SECURITY - JUST MAKE IT WORK
-# --------------------------
-import torch.serialization
-torch.serialization._default_load_weights_only = False
+from ultralytics.nn.tasks import DetectionModel
 
 # --------------------------
 # 1) Request schema
@@ -37,9 +31,11 @@ app.add_middleware(
 )
 
 # --------------------------
-# 3) Load YOLO model
+# 3) Load YOLO model with safe_globals context manager
 # --------------------------
-model = YOLO("best.pt")
+with torch.serialization.safe_globals([DetectionModel]):
+    from ultralytics import YOLO
+    model = YOLO("best.pt")
 
 # --------------------------
 # 4) Test endpoint
