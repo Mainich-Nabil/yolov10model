@@ -9,9 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from PIL import Image
 import numpy as np
-import torch
 from ultralytics import YOLO
-from ultralytics.nn.tasks import DetectionModel
 
 # --------------------------
 # 1) Request schema
@@ -24,7 +22,6 @@ class ImageRequest(BaseModel):
 # --------------------------
 app = FastAPI(title="Pothole Detection API")
 
-# Allow requests from anywhere (Flutter / mobile)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,10 +30,9 @@ app.add_middleware(
 )
 
 # --------------------------
-# 3) Load YOLO model safely (keep full checkpoint)
+# 3) Load YOLO model
 # --------------------------
-with torch.serialization.add_safe_globals([DetectionModel]):
-    model = YOLO("best.pt")  # keeps everything unchanged
+model = YOLO("best.pt")  # Just load it directly - works fine
 
 # --------------------------
 # 4) Test endpoint
@@ -51,19 +47,12 @@ def root():
 @app.post("/detect")
 async def detect_pothole(req: ImageRequest) -> Any:
     try:
-        # Decode base64 → PIL Image
         img_data = base64.b64decode(req.image)
         img = Image.open(io.BytesIO(img_data)).convert("RGB")
-
-        # Run inference
         results = model.predict(np.array(img), imgsz=640, conf=0.25)
-
-        # Consider a pothole detected if at least 1 box
         detections = results[0]
         has_pothole = len(detections.boxes.xyxy) > 0
-
         return {"potholeDetected": has_pothole}
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal error: {e}")
 
