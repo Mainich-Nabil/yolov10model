@@ -9,8 +9,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from PIL import Image
 import numpy as np
+
+# --------------------------
+# FORCE weights_only=False - PATCH BEFORE IMPORTING ULTRALYTICS
+# --------------------------
 import torch
-from ultralytics.nn.tasks import DetectionModel
+
+original_torch_load = torch.load
+
+def patched_torch_load(f, *args, **kwargs):
+    # Force weights_only to False
+    kwargs['weights_only'] = False
+    return original_torch_load(f, *args, **kwargs)
+
+# Replace torch.load with our patched version
+torch.load = patched_torch_load
+
+# NOW import ultralytics AFTER the patch
+from ultralytics import YOLO
 
 # --------------------------
 # 1) Request schema
@@ -31,11 +47,9 @@ app.add_middleware(
 )
 
 # --------------------------
-# 3) Load YOLO model with safe_globals context manager
+# 3) Load YOLO model
 # --------------------------
-with torch.serialization.safe_globals([DetectionModel]):
-    from ultralytics import YOLO
-    model = YOLO("best.pt")
+model = YOLO("best.pt")
 
 # --------------------------
 # 4) Test endpoint
